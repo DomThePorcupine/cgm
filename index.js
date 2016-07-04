@@ -45,6 +45,7 @@ fs.readFile(file, 'utf8', function(err,data) {
     });
   }); 
 });
+var currentChatName = "";
 var currentChat = "";
 // Clear the current buffer to give us a 'clean slate'
 term.clear();
@@ -82,6 +83,7 @@ function menu(callback) {
     } else if(input.includes("/open ")) {
       openChat(input.replace("/open ", ""), function(result){
           currentChat = result;
+					currentChatName = input.replace("/open ", "");
           callback(true);       
       });      
     } else if(input == "/quit") {
@@ -91,7 +93,9 @@ function menu(callback) {
     // Send a message to the current group
     } else if(input.charAt(0) != '/') {
       sendMessage(input, function(params) {
-        callback(true);
+				openChat(currentChatName,function(res){
+        	callback(true);
+				});
       });
     } else {
       term.red("Unknown command, will now exit!");
@@ -106,16 +110,14 @@ function sendMessage(message, cb) {
   var guid = generateGUID();
   var formToSend = new Object;
   formToSend.message = {source_guid: guid, text: message };
-  hope = JSON.stringify(formToSend);
-  console.log(hope);
-  request.post({
+  request({
     url: url,
-    form: { "message": { "source_guid": guid.toString(), "text": message.toString()}},
-    json: true,
+		method: 'POST',
+    json: formToSend
   }, function(er, respn, bdy) {
     if(!er) {
-      console.log(respn);
-      cb();
+			//fs.appendFile('stuff.log', JSON.parse(respn), function (err) {});
+			cb();
     }else {
       console.log("help");
     }
