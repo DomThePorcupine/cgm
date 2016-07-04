@@ -175,7 +175,33 @@ function writeMessages(msgs) {
     } else if(parseInt(msgs[num].user_id) % 5 == 4) {
       term.cyan(msgs[num].name + ": ");
     }
-    term.green(msgs[num].text + '\n');
+    var italic = false;
+    var bold = false;
+    var msg = msgs[num].text;
+    if(msg == null) {
+      msg = "";
+    }
+    for(var v = 0; v < msg.length; v++) {
+      if(msg[v] == "_") {
+        italic = !italic;
+      } else if(msg[v] == "*") {
+        bold = !bold;
+      }
+      if(!(/[^a-zA-Z0-9 ]/.test(msg[v]))) {
+        if(bold) {
+          if(italic) {
+            term.green.bold.italic(msg[v]);
+          } else {
+            term.green.bold(msg[v]);
+          }
+        } else if(italic) {
+          term.green.italic(msg[v]);
+        } else {
+          term.green(msg[v]);
+        }
+      }
+    }
+    term.green("\n");
   }
 }
 // This function is used to draw lines across the terminal
