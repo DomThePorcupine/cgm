@@ -1,0 +1,18 @@
+{
+  "name": "cgm",
+  "version": "1.0.0",
+  "description": "A terminal based groupme messaging client",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "MIT",
+  "bin": {
+    "snippet": "./index.js"
+  },
+  "dependencies": {
+    "terminal-kit":"*",
+    "request":"*"
+  }
+}
