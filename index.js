@@ -1,14 +1,22 @@
 #! /usr/bin/env node
 // Include the terminal-kit lib
 var term = require('terminal-kit').terminal;
+
 // Include os, we will need this to get the location of
 // the cligm.json file!
 var os = require('os');
+
 // Include fs, we will need it to actually read the cligm.json
 // file
 var fs = require('fs');
+
 // Request libs for POST and GET
 var request = require('request');
+
+// We need notification libs, how else will you 
+// know you got a message?!
+var notifier = require('node-notifier');
+
 // Define our base url and access keys
 var BASE_URL = "https://api.groupme.com/v3";
 var user_access_key;
@@ -45,10 +53,13 @@ fs.readFile(file, 'utf8', function(err,data) {
     });
   }); 
 });
+
 var currentChatName = "";
 var currentChat = "";
+
 // Clear the current buffer to give us a 'clean slate'
 term.clear();
+
 // Display a welcome message to the user
 term("Welcome to cligm! :D\n");
 term.green.underline("This app is going to be so dope!\n");
@@ -58,12 +69,15 @@ term.moveTo(1, term.height-2);
 term.blue("Please enter command below:\n");
 loopIt();
 
+// This is a recursive function that is the main
+// loop for the entire program
 function loopIt() {
   menu(function(result) {
     if(result) {
       // Move to the bottom left hand corner
       term.moveTo(1, term.height-2);
-      term.blue("Please enter command below:\n");
+      //term.blue("Please enter command below:\n");
+      drawLine(); 
       loopIt();
     } else {
       process.exit();
@@ -94,6 +108,10 @@ function menu(callback) {
     } else if(input.charAt(0) != '/') {
       sendMessage(input, function(params) {
 				openChat(currentChatName,function(res){
+          notifier.notify({
+            "title": "Domdre",
+            "message": input
+          });
         	callback(true);
 				});
       });
@@ -165,15 +183,15 @@ function writeMessages(msgs) {
   var num = msgs.length - 4;
   while(num--) {
     if(parseInt(msgs[num].user_id) % 5 == 0) {
-      term.red(msgs[num].name + ": ");
+      term.red(msgs[num].name + "(" + msgs[num].favorited_by.length + "): ");
     } else if(parseInt(msgs[num].user_id) % 5 == 1) {
-      term.white(msgs[num].name + ": ");
+      term.white(msgs[num].name + "(" + msgs[num].favorited_by.length + "): ");
     } else if(parseInt(msgs[num].user_id) % 5 == 2) {
-      term.blue(msgs[num].name + ": ");
+      term.blue(msgs[num].name + "(" + msgs[num].favorited_by.length + "): ");
     } else if(parseInt(msgs[num].user_id) % 5 == 3) {
-      term.magenta(msgs[num].name + ": ");
+      term.magenta(msgs[num].name + "(" + msgs[num].favorited_by.length + "): ");
     } else if(parseInt(msgs[num].user_id) % 5 == 4) {
-      term.cyan(msgs[num].name + ": ");
+      term.cyan(msgs[num].name + "(" + msgs[num].favorited_by.length + "): ");
     }
     var italic = false;
     var bold = false;
@@ -187,7 +205,7 @@ function writeMessages(msgs) {
       } else if(msg[v] == "*") {
         bold = !bold;
       }
-      if(!(/[^a-zA-Z0-9 ]/.test(msg[v]))) {
+      if(!(/[^a-zA-Z0-9?!.,"'/()#:; ]/.test(msg[v]))) {
         if(bold) {
           if(italic) {
             term.green.bold.italic(msg[v]);

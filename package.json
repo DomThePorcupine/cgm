@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "terminal-kit":"*",
-    "request":"*"
+    "request":"*",
+    "node-notifier":"*"
   }
 }
