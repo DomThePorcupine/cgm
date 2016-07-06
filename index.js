@@ -21,6 +21,10 @@ var notifier = require('node-notifier');
 var BASE_URL = "https://api.groupme.com/v3";
 var user_access_key;
 var grps = [];
+var currentChatName = "";
+var currentChat = "";
+var currentMessages = new Object();
+var user_id = "";
 // ----- Now begins the real app ----- //
 
 var file = os.homedir() + "/.cligm.json";
@@ -44,18 +48,27 @@ fs.readFile(file, 'utf8', function(err,data) {
       temp.id = usergroups[i].id;
       grps.push(temp);
     }
+		request({
+		 	url: "https://api.groupme.com/v3/users/me?token=" + user_access_key
+		}, function(er, rspn, bdy) {
+			if(!er) {
+				user_id = JSON.parse(bdy).response.id;
+			} else {
+				term.red("Trouble getting your user_id :( have to exit!");
+				process.exit();
+			}
+		});
+		
     writeObj = { access_token: user_access_key, groups: grps };
-
-    fs.writeFile(file, JSON.stringify(writeObj), function(err) {
+    
+		fs.writeFile(file, JSON.stringify(writeObj), function(err) {
       if(err) {
-        console.log("Uh oh something went very wrong");
+        term.red("Uh oh something went very wrong");
       }
     });
   }); 
 });
 
-var currentChatName = "";
-var currentChat = "";
 
 // Clear the current buffer to give us a 'clean slate'
 term.clear();
@@ -95,9 +108,9 @@ function menu(callback) {
       });
     // Open group
     } else if(input.includes("/open ")) {
-      openChat(input.replace("/open ", ""), function(result){
+			currentChatName = input.replace("/open ", "");
+      openChat(function(result){
           currentChat = result;
-					currentChatName = input.replace("/open ", "");
           callback(true);       
       });      
     } else if(input == "/quit") {
@@ -107,7 +120,7 @@ function menu(callback) {
     // Send a message to the current group
     } else if(input.charAt(0) != '/') {
       sendMessage(input, function(params) {
-				openChat(currentChatName,function(res){
+				openChat(function(res){
           notifier.notify({
             "title": "Domdre",
             "message": input
@@ -115,12 +128,19 @@ function menu(callback) {
         	callback(true);
 				});
       });
+		} else if(input.includes("/like ")) {
+			likeMessage(currentMessages[input.replace("/like ", "")], function(params) {
+				openChat(function(res){
+					callback(true);
+				});
+			});
     } else {
       term.red("Unknown command, will now exit!");
       callback(false);
     }
   });
 }
+
 // This function will send a message to the group
 // defined in the currentChat variable
 function sendMessage(message, cb) {
@@ -137,19 +157,26 @@ function sendMessage(message, cb) {
 			//fs.appendFile('stuff.log', JSON.parse(respn), function (err) {});
 			cb();
     }else {
-      console.log("help");
+      term.red("help");
     }
   });
 }
+
 // This function will get the most recent messages from 
 // a chosen group
-function openChat(group_to_open, callback) {
+function openChat(callback) {
   for(var x in grps){
-    if(grps[x].name.toLowerCase().replace(/\W/g, '') == group_to_open.toLowerCase().replace(/\W/g, '')) {
-      var theName = grps[x].name;
+		currentMessages = new Object();
+    if(grps[x].name.toLowerCase().replace(/\W/g, '') == currentChatName.toLowerCase().replace(/\W/g, '')) {
+      
+			var theName = grps[x].name;
       var theId = grps[x].id;
+
       getMessages(grps[x].id, function(result) {
-        msgs = JSON.parse(result).response.messages;
+        msgs = result.messages;
+				for(var h in msgs) {
+					currentMessages[h] = msgs[h].id;
+				}
         term.clear();
         term.blue("\n" + theName + "\n");
         drawLine();
@@ -159,6 +186,7 @@ function openChat(group_to_open, callback) {
     }
   }
 }
+
 // This function lists all the groups you belong to
 function showGroups(params) {
   term.clear();
@@ -173,25 +201,56 @@ function showGroups(params) {
       }
       params();
     } else {
-      console.log("Something has gone horribly wrong!");
+      term.red("Something has gone horribly wrong!");
     }
   });
 }
+
 // This function takes a nicks hash and a msgs array and prints the proper number
 // of messages on the screen
 function writeMessages(msgs) {
   var num = msgs.length - 4;
   while(num--) {
     if(parseInt(msgs[num].user_id) % 5 == 0) {
-      term.red(msgs[num].name + "(" + msgs[num].favorited_by.length + "): ");
+      term.red("[" + num + "] " + msgs[num].name + " ");  
+			if(msgs[num].favorited_by.includes(user_id)) {
+				term.bold.underline.red("(" + msgs[num].favorited_by.length + ")");
+			} else {
+				term.red("(" + msgs[num].favorited_by.length + ")");
+			}
+			term.red(": ");
     } else if(parseInt(msgs[num].user_id) % 5 == 1) {
-      term.white(msgs[num].name + "(" + msgs[num].favorited_by.length + "): ");
+      term.white("[" + num + "] " + msgs[num].name + " ");
+			if(msgs[num].favorited_by.includes(user_id)) {
+				term.bold.underline.white("(" + msgs[num].favorited_by.length + ")");
+			} else {
+				term.white("(" + msgs[num].favorited_by.length + ")");
+			}
+			term.white(": ");
     } else if(parseInt(msgs[num].user_id) % 5 == 2) {
-      term.blue(msgs[num].name + "(" + msgs[num].favorited_by.length + "): ");
+      term.blue("[" + num + "] " + msgs[num].name + " ");
+			if(msgs[num].favorited_by.includes(user_id)) {
+				term.bold.underline.blue("(" + msgs[num].favorited_by.length + ")");
+			} else {
+				term.blue("(" + msgs[num].favorited_by.length + ")");
+			}
+			term.blue(": ");
     } else if(parseInt(msgs[num].user_id) % 5 == 3) {
-      term.magenta(msgs[num].name + "(" + msgs[num].favorited_by.length + "): ");
+      term.magenta("[" + num + "] " + msgs[num].name + " ");
+			if(msgs[num].favorited_by.includes(user_id)) {
+				term.bold.underline.magenta("(" + msgs[num].favorited_by.length + ")");
+			} else {
+				term.magenta("(" + msgs[num].favorited_by.length + ")");
+			}
+			term.magenta(": ");
     } else if(parseInt(msgs[num].user_id) % 5 == 4) {
-      term.cyan(msgs[num].name + "(" + msgs[num].favorited_by.length + "): ");
+      term.cyan("[" + num + "] " + msgs[num].name + " ");
+			if(msgs[num].favorited_by.includes(user_id)) {
+				term.bold.underline.cyan("(" + msgs[num].favorited_by.length + ")");
+			} else {
+				term.cyan("(" + msgs[num].favorited_by.length + ")");
+			}
+			term.cyan(": ");
     }
     var italic = false;
     var bold = false;
@@ -200,12 +259,13 @@ function writeMessages(msgs) {
       msg = "";
     }
     for(var v = 0; v < msg.length; v++) {
-      if(msg[v] == "_") {
+      if(msg[v] == "_" && msg.indexOf("://") == -1) {
         italic = !italic;
       } else if(msg[v] == "*") {
         bold = !bold;
       }
-      if(!(/[^a-zA-Z0-9?!.,"'/()#:; ]/.test(msg[v]))) {
+      
+			if((!(/[^a-zA-Z0-9?!.,"'/()#:@; ]/.test(msg[v])) || msg.indexOf("://") > -1)) {
         if(bold) {
           if(italic) {
             term.green.bold.italic(msg[v]);
@@ -215,13 +275,16 @@ function writeMessages(msgs) {
         } else if(italic) {
           term.green.italic(msg[v]);
         } else {
-          term.green(msg[v]);
+					if(msg[v] != '\n') {
+          	term.green(msg[v]);
+					}
         }
       }
     }
     term.green("\n");
   }
 }
+
 // This function is used to draw lines across the terminal
 function drawLine() {
   var i = term.width;
@@ -239,21 +302,37 @@ function getUserGroups(callback) {
     if(!er) {
       callback(JSON.parse(bdy).response);
     }else {
-      console.log("help");
+      term.red("help");
     }
   });
 }
 
+// This function likes messages
+function likeMessage(messageId, callback) {
+	var url = BASE_URL + '/messages/' + currentChat + '/' + messageId + '/like' + '?token=' + user_access_key;
+	request({
+		url: url,
+		method: 'POST'
+	}, function(er, respn, bdy) {
+		if(!er) {
+			callback();
+		} else {
+			term.red("Uh oh");
+		}
+	});
+}
+
 // This function returns messages from a specified group
 function getMessages(groupId, callback) {
-  var url = BASE_URL + '/groups/' + groupId + '/messages?token=' + user_access_key;
+	var msgsToLoad = term.height - 4;
+  var url = BASE_URL + '/groups/' + groupId + '/messages?limit=' + msgsToLoad + '&token=' + user_access_key;
   request({
     url: url,
   }, function(er, respn, bdy) {
     if(!er) {
-      callback(bdy);
+      callback(JSON.parse(bdy).response);
     } else {
-      console.log("help!");
+      term.red("help!");
     }
   });
 }
