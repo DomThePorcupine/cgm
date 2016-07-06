@@ -21,6 +21,7 @@ var notifier = require('node-notifier');
 var BASE_URL = "https://api.groupme.com/v3";
 var user_access_key;
 var grps = [];
+var mssgs = [];
 var currentChatName = "";
 var currentChat = "";
 var currentMessages = new Object();
@@ -79,7 +80,7 @@ term.green.underline("This app is going to be so dope!\n");
 
 // Move to the bottom left hand corner
 term.moveTo(1, term.height-2);
-term.blue("Please enter command below:\n");
+drawLine();
 loopIt();
 
 // This is a recursive function that is the main
@@ -97,7 +98,6 @@ function loopIt() {
     }
   });
 }
-
 
 function menu(callback) {
   term.inputField(function(error, input) {
@@ -121,10 +121,6 @@ function menu(callback) {
     } else if(input.charAt(0) != '/') {
       sendMessage(input, function(params) {
 				openChat(function(res){
-          notifier.notify({
-            "title": "Domdre",
-            "message": input
-          });
         	callback(true);
 				});
       });
@@ -154,7 +150,6 @@ function sendMessage(message, cb) {
     json: formToSend
   }, function(er, respn, bdy) {
     if(!er) {
-			//fs.appendFile('stuff.log', JSON.parse(respn), function (err) {});
 			cb();
     }else {
       term.red("help");
@@ -172,7 +167,8 @@ function openChat(callback) {
 			var theName = grps[x].name;
       var theId = grps[x].id;
 
-      getMessages(grps[x].id, function(result) {
+      getMessages(theId, function(result) {
+				mssgs = result.messages;
         msgs = result.messages;
 				for(var h in msgs) {
 					currentMessages[h] = msgs[h].id;
